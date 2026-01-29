@@ -43,6 +43,21 @@ app.post("/users", async (req, res) => {
     res.status(500).json({ error: "DB insert failed" });
   }
 });
+app.get("/init-db", async (req, res) => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        name TEXT,
+        email TEXT
+      )
+    `);
+    res.send("✅ DB initialized – users table created");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("❌ DB init failed");
+  }
+});
 
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
