@@ -58,6 +58,16 @@ app.get("/init-db", async (req, res) => {
     res.status(500).send("❌ DB init failed");
   }
 });
+app.get("/debug-tables", async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
