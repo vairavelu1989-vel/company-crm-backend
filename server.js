@@ -104,6 +104,22 @@ app.get("/debug-tables", async (req, res) => {
 /* ===============================
    Server Start
 ================================ */
+app.get("/init-db", async (req, res) => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL
+      )
+    `);
+    res.send("DB initialized successfully");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("DB init failed");
+  }
+});
+
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
