@@ -30,34 +30,28 @@ app.get("/users", async (req, res) => {
 
 // Add user to DB
 app.post("/users", async (req, res) => {
+  const { name, email } = req.body;
+
+  if (!name || !email) {
+    return res.status(400).json({ error: "Name and email required" });
+  }
+
   try {
-    const { name, department } = req.body;
     const result = await pool.query(
-      "INSERT INTO users (name, department) VALUES ($1, $2) RETURNING *",
-      [name, department]
+      "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING *",
+      [name, email]
     );
-    console.log("User added:", result.rows[0]);
-    res.json(result.rows[0]);
+
+    res.json({
+      message: "User added",
+      user: result.rows[0]
+    });
   } catch (err) {
-    console.error("DB insert error:", err);
+    console.error("DB INSERT ERROR:", err.message);
     res.status(500).json({ error: "DB insert failed" });
   }
 });
-app.get("/init-db", async (req, res) => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        name TEXT,
-        email TEXT
-      )
-    `);
-    res.send("✅ DB initialized – users table created");
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("❌ DB init failed");
-  }
-});
+
 app.get("/debug-tables", async (req, res) => {
   try {
     const result = await pool.query(
