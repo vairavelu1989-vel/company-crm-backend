@@ -7,15 +7,17 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// PostgreSQL
+/* =========================
+   PostgreSQL Connection
+========================= */
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 
-// Redis
-const Redis = require("ioredis");
-
+/* =========================
+   Redis (Upstash - TLS)
+========================= */
 const redis = new Redis(process.env.REDIS_URL, {
   tls: {
     rejectUnauthorized: false
@@ -30,29 +32,30 @@ redis.on("error", (err) => {
   console.error("Redis error:", err);
 });
 
+/* =========================
+   Routes
+========================= */
+
 // Home
 app.get("/", (req, res) => {
   res.send("Backend + PostgreSQL + Redis LIVE 🚀");
 });
 
-// GET users (WITH CACHE)
+// Get users (with Redis cache)
 app.get("/users", async (req, res) => {
   try {
-    // 1️⃣ Check Redis cache
     const cached = await redis.get("users");
 
     if (cached) {
-      console.log("Serving from Redis cache ⚡");
+      console.log("Serving from Redis cache");
       return res.json(JSON.parse(cached));
     }
 
-    // 2️⃣ If cache miss → DB
     const result = await pool.query("SELECT * FROM users");
 
-    // 3️⃣ Save to Redis (60 sec)
     await redis.set("users", JSON.stringify(result.rows), "EX", 60);
+    console.log("Serving from DB, cache updated");
 
-    console.log("Serving from DB, cache saved 🗄️");
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -60,7 +63,7 @@ app.get("/users", async (req, res) => {
   }
 });
 
-// POST user (CLEAR CACHE)
+// Add user
 app.post("/users", async (req, res) => {
   const { name, email } = req.body;
 
@@ -74,7 +77,7 @@ app.post("/users", async (req, res) => {
       [name, email]
     );
 
-    // Clear cache
+    // clear cache
     await redis.del("users");
 
     res.json({
@@ -82,9 +85,17 @@ app.post("/users", async (req, res) => {
       user: result.rows[0]
     });
   } catch (err) {
-    console.error(err.message);
+    console.error("DB INSERT ERROR:", err.message);
     res.status(500).json({ error: "DB insert failed" });
   }
+});
+
+// Debug tables
+app.get("/debug-tables", async (req, res) => {
+  const result = await pool.query(
+    "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
+  );
+  res.json(result.rows);
 });
 
 app.listen(PORT, () => {
