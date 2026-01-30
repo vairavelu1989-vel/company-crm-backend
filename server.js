@@ -7,62 +7,54 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-/* ===============================
-   PostgreSQL Connection
-================================ */
+// PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  ssl: { rejectUnauthorized: false }
 });
 
-/* ===============================
-   Redis Connection
-================================ */
+// Redis
 const redis = new Redis(process.env.REDIS_URL);
 
 redis.on("connect", () => {
-  console.log("Redis connected");
+  console.log("Redis connected ✅");
 });
 
 redis.on("error", (err) => {
-  console.error("Redis error:", err);
+  console.error("Redis error ❌", err);
 });
-
-/* ===============================
-   Routes
-================================ */
 
 // Home
 app.get("/", (req, res) => {
   res.send("Backend + PostgreSQL + Redis LIVE 🚀");
 });
 
-/* ---------- GET USERS (WITH CACHE) ---------- */
+// GET users (WITH CACHE)
 app.get("/users", async (req, res) => {
   try {
     // 1️⃣ Check Redis cache
-    const cachedUsers = await redis.get("users");
+    const cached = await redis.get("users");
 
-    if (cachedUsers) {
-      console.log("Serving users from Redis cache");
-      return res.json(JSON.parse(cachedUsers));
+    if (cached) {
+      console.log("Serving from Redis cache ⚡");
+      return res.json(JSON.parse(cached));
     }
 
-    // 2️⃣ Fetch from DB
+    // 2️⃣ If cache miss → DB
     const result = await pool.query("SELECT * FROM users");
 
-    // 3️⃣ Save to Redis for 60 seconds
+    // 3️⃣ Save to Redis (60 sec)
     await redis.set("users", JSON.stringify(result.rows), "EX", 60);
 
-    console.log("Serving users from DB, cache updated");
+    console.log("Serving from DB, cache saved 🗄️");
     res.json(result.rows);
   } catch (err) {
-    console.error("DB read error:", err);
-    res.status(500).json({ error: "DB read failed" });
+    console.error(err);
+    res.status(500).json({ error: "Failed to load users" });
   }
 });
 
-/* ---------- ADD USER ---------- */
+// POST user (CLEAR CACHE)
 app.post("/users", async (req, res) => {
   const { name, email } = req.body;
 
@@ -76,57 +68,16 @@ app.post("/users", async (req, res) => {
       [name, email]
     );
 
-    // 🧹 Clear cache after insert
+    // Clear cache
     await redis.del("users");
 
     res.json({
       message: "User added",
-      user: result.rows[0],
+      user: result.rows[0]
     });
   } catch (err) {
-    console.error("DB INSERT ERROR:", err.message);
+    console.error(err.message);
     res.status(500).json({ error: "DB insert failed" });
-  }
-});
-app.get("/debug-users", async (req, res) => {
-  try {
-    const result = await pool.query("SELECT * FROM users LIMIT 5");
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({
-      error: err.message,
-      detail: err.stack
-    });
-  }
-});
-/* ---------- DEBUG TABLES ---------- */
-app.get("/debug-tables", async (req, res) => {
-  try {
-    const result = await pool.query(
-      "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
-    );
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-/* ===============================
-   Server Start
-================================ */
-app.get("/init-db", async (req, res) => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        name TEXT NOT NULL,
-        email TEXT NOT NULL
-      )
-    `);
-    res.send("DB initialized successfully");
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("DB init failed");
   }
 });
 
