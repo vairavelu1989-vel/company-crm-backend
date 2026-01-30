@@ -14,14 +14,20 @@ const pool = new Pool({
 });
 
 // Redis
-const redis = new Redis(process.env.REDIS_URL);
+const Redis = require("ioredis");
+
+const redis = new Redis(process.env.REDIS_URL, {
+  tls: {
+    rejectUnauthorized: false
+  }
+});
 
 redis.on("connect", () => {
-  console.log("Redis connected ✅");
+  console.log("Redis connected successfully");
 });
 
 redis.on("error", (err) => {
-  console.error("Redis error ❌", err);
+  console.error("Redis error:", err);
 });
 
 // Home
