@@ -88,7 +88,17 @@ app.post("/users", async (req, res) => {
     res.status(500).json({ error: "DB insert failed" });
   }
 });
-
+app.get("/debug-users", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM users LIMIT 5");
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({
+      error: err.message,
+      detail: err.stack
+    });
+  }
+});
 /* ---------- DEBUG TABLES ---------- */
 app.get("/debug-tables", async (req, res) => {
   try {
