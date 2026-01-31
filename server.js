@@ -1,6 +1,7 @@
 const express = require("express");
 const { Pool } = require("pg");
 const Redis = require("ioredis");
+const bcrypt = require("bcryptjs");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,13 +17,9 @@ const pool = new Pool({
 });
 
 /* =========================
-   Redis (Upstash - TLS)
+   Redis (Upstash)
 ========================= */
-const redis = new Redis(process.env.REDIS_URL, {
-  tls: {
-    rejectUnauthorized: false
-  }
-});
+const redis = new Redis(process.env.REDIS_URL);
 
 redis.on("connect", () => {
   console.log("Redis connected successfully");
@@ -77,7 +74,6 @@ app.post("/users", async (req, res) => {
       [name, email]
     );
 
-    // clear cache
     await redis.del("users");
 
     res.json({
@@ -90,20 +86,11 @@ app.post("/users", async (req, res) => {
   }
 });
 
-// Debug tables
-app.get("/debug-tables", async (req, res) => {
-  const result = await pool.query(
-    "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
-  );
-  res.json(result.rows);
-});
-const bcrypt = require("bcryptjs");
-
+// Register (JWT step)
 app.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // 🔒 SAFETY CHECK
     if (!name || !email || !password) {
       return res.status(400).json({
         error: "name, email, password required"
@@ -119,12 +106,19 @@ app.post("/register", async (req, res) => {
 
     res.json({ message: "User registered successfully" });
   } catch (err) {
-    console.error(err);
+    console.error("Register error:", err);
     res.status(500).json({ error: "Register failed" });
   }
 });
-on({ message: "User registered successfully" });
+
+// Debug tables
+app.get("/debug-tables", async (req, res) => {
+  const result = await pool.query(
+    "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
+  );
+  res.json(result.rows);
 });
+
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
