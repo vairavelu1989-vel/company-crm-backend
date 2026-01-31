@@ -97,7 +97,20 @@ app.get("/debug-tables", async (req, res) => {
   );
   res.json(result.rows);
 });
+const bcrypt = require("bcryptjs");
 
+app.post("/register", async (req, res) => {
+  const { name, email, password } = req.body;
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  await pool.query(
+    "INSERT INTO users (name, email, password) VALUES ($1,$2,$3)",
+    [name, email, hashedPassword]
+  );
+
+  res.json({ message: "User registered successfully" });
+});
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
