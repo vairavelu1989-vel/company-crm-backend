@@ -100,16 +100,30 @@ app.get("/debug-tables", async (req, res) => {
 const bcrypt = require("bcryptjs");
 
 app.post("/register", async (req, res) => {
-  const { name, email, password } = req.body;
+  try {
+    const { name, email, password } = req.body;
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+    // 🔒 SAFETY CHECK
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        error: "name, email, password required"
+      });
+    }
 
-  await pool.query(
-    "INSERT INTO users (name, email, password) VALUES ($1,$2,$3)",
-    [name, email, hashedPassword]
-  );
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-  res.json({ message: "User registered successfully" });
+    await pool.query(
+      "INSERT INTO users (name, email, password) VALUES ($1,$2,$3)",
+      [name, email, hashedPassword]
+    );
+
+    res.json({ message: "User registered successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Register failed" });
+  }
+});
+on({ message: "User registered successfully" });
 });
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
