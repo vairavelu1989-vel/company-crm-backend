@@ -75,6 +75,48 @@ app.get("/users", async (req, res) => {
     res.status(500).json({ error: "Failed to load users" });
   }
 });
+app.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password required" });
+    }
+
+    const result = await pool.query(
+      "SELECT * FROM users WHERE email=$1",
+      [email]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    const user = result.rows[0];
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    // 🔑 JWT CREATE
+    const token = jwt.sign(
+      { id: user.id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    res.json({
+      message: "Login successful",
+      token
+    });
+
+  } catch (err) {
+    console.error("LOGIN ERROR:", err.message);
+    res.status(500).json({ error: "Login failed" });
+  }
+});
 
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
