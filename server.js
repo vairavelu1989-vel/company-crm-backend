@@ -141,6 +141,10 @@ app.get("/fix-users-table", async (req, res) => {
   `);
   res.send("Password column added");
 });
+app.get("/reset-users", async (req, res) => {
+  await pool.query("DELETE FROM users");
+  res.send("Users cleared");
+});
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
