@@ -145,6 +145,9 @@ app.get("/reset-users", async (req, res) => {
   await pool.query("DELETE FROM users");
   res.send("Users cleared");
 });
+app.get("/ping", (req, res) => {
+  res.send("NEW CODE DEPLOYED");
+});
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
