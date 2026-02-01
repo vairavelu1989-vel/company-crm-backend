@@ -138,6 +138,18 @@ const authMiddleware = (req, res, next) => {
     return res.status(401).json({ error: "Invalid or expired token" });
   }
 };
+app.get("/profile", authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, name, email FROM users WHERE id=$1",
+      [req.user.id]
+    );
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: "Profile fetch failed" });
+  }
+});
 
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
