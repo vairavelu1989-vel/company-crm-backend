@@ -2,7 +2,7 @@ const express = require("express");
 const { Pool } = require("pg");
 const Redis = require("ioredis");
 const bcrypt = require("bcryptjs");
-
+const jwt = require("jsonwebtoken");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
