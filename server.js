@@ -148,6 +148,9 @@ app.get("/reset-users", async (req, res) => {
 app.get("/ping", (req, res) => {
   res.send("NEW CODE DEPLOYED");
 });
+app.get("/__proof", (req, res) => {
+  res.send("SERVER.JS UPDATED");
+});
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
