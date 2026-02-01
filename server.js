@@ -134,7 +134,13 @@ app.get("/debug-tables", async (req, res) => {
   );
   res.json(result.rows);
 });
-
+app.get("/fix-users-table", async (req, res) => {
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS password TEXT
+  `);
+  res.send("Password column added");
+});
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
