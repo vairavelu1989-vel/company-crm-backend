@@ -88,29 +88,44 @@ app.post("/users", async (req, res) => {
 });
 
 // Register (JWT step)
-app.post("/register", async (req, res) => {
+app.post("/login", async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { email, password } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({
-        error: "name, email, password required"
-      });
+    if (!email || !password) {
+      return res.status(400).json({ error: "email & password required" });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    await pool.query(
-      "INSERT INTO users (name, email, password) VALUES ($1,$2,$3)",
-      [name, email, hashedPassword]
+    const result = await pool.query(
+      "SELECT * FROM users WHERE email=$1",
+      [email]
     );
 
-    res.json({ message: "User registered successfully" });
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: "Invalid email" });
+    }
+
+    const user = result.rows[0];
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: "Wrong password" });
+    }
+
+    const token = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    res.json({ token });
+
   } catch (err) {
-    console.error("Register error:", err);
-    res.status(500).json({ error: "Register failed" });
+    console.error("Login error:", err);
+    res.status(500).json({ error: "Login failed" });
   }
 });
+
 
 // Debug tables
 app.get("/debug-tables", async (req, res) => {
